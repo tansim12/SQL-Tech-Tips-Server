@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from "express";
 
 import globalErrorHandler from "./app/Error-Handler/globalErrorHandler";
 import normalMiddleware from "./app/middleware/normalMiddleware";
+import { authRoutes } from "./app/Modules/Auth/Auth.route";
 
 const app: Application = express();
 normalMiddleware(app);
@@ -12,7 +13,7 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-// app.use("/api/user", userRouter);
+app.use("/api/auth", authRoutes);
 
 
 app.all("*", (req: Request, res: Response, next) => {
