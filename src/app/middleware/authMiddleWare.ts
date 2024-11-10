@@ -7,9 +7,6 @@ import { TUserRole } from "../Modules/User/User.interface";
 import prisma from "../shared/prisma";
 import { UserStatus } from "@prisma/client";
 
-
-
-
 dotenv.config();
 
 const handleUnauthorizedError = (message: string, next: NextFunction) => {

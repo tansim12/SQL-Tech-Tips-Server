@@ -4,6 +4,9 @@ import { USER_ROLE, USER_STATUS, userSearchTerm } from "./User.const";
 import prisma from "../../shared/prisma";
 import AppError from "../../Error-Handler/AppError";
 import { StatusCodes } from "http-status-codes";
+import { IPaginationOptions } from "../../interface/pagination";
+import { paginationHelper } from "../../helper/paginationHelper";
+import { Prisma } from "@prisma/client";
 
 const updateProfileDB = async (
   id: string,
@@ -81,15 +84,14 @@ const getSingleUserDB = async (tokenUserId: string, paramsUserId: string) => {
       phone: true,
       role: true,
       status: true,
-      userProfile:{
-        select:{
-          id:true,
-          bio:true,
-          description:true
-        }
-      }
+      userProfile: {
+        select: {
+          id: true,
+          bio: true,
+          description: true,
+        },
+      },
     },
-    
   });
 
   if (user?.role === USER_ROLE.user) {
@@ -97,7 +99,7 @@ const getSingleUserDB = async (tokenUserId: string, paramsUserId: string) => {
       throw new AppError(StatusCodes.BAD_REQUEST, "You Can't find This User");
     }
   }
- 
+
   if (user?.status === USER_STATUS.block) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
@@ -105,45 +107,99 @@ const getSingleUserDB = async (tokenUserId: string, paramsUserId: string) => {
     );
   }
   if (user?.isDelete) {
-    throw new AppError(StatusCodes.BAD_REQUEST, "This User Is Already Delete !");
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "This User Is Already Delete !"
+    );
   }
 
   return user;
 };
 const findAllUserDB = async (
   tokenUserId: string,
-  queryParams: Partial<TUser>
+  filters: Partial<TUser>,
+  options: IPaginationOptions
 ) => {
-  // const user = await UserModel.findById({ _id: tokenUserId }).select(
-  //   "+password"
-  // );
-  // if (!user) {
-  //   throw new AppError(httpStatus.NOT_FOUND, "This User Not Found !");
-  // }
-  // if (user?.status === USER_STATUS.block) {
-  //   throw new AppError(
-  //     httpStatus.BAD_REQUEST,
-  //     "This User Is Already Blocked !"
-  //   );
-  // }
-  // if (user?.isDelete) {
-  //   throw new AppError(httpStatus.BAD_REQUEST, "This User Is Already Delete !");
-  // }
-  // if (user?.role !== USER_ROLE.admin) {
-  //   throw new AppError(
-  //     httpStatus.BAD_REQUEST,
-  //     "You Can't Access This Route.Only Admin Access Here !"
-  //   );
-  // }
-  // const queryUser = new QueryBuilder(UserModel.find(), queryParams)
-  //   .filter()
-  //   .paginate()
-  //   .search(userSearchTerm)
-  //   .sort()
-  //   .fields();
-  // const result = await queryUser.modelQuery;
-  // const meta = await queryUser.countTotal();
-  // return { meta, result };
+  const { page, limit, skip } = paginationHelper.calculatePagination(options);
+  const { searchTerm, ...filterData } = filters;
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: {
+      id: tokenUserId,
+    },
+  });
+
+  if (user?.status === USER_STATUS.block) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "This User Is Already Blocked !"
+    );
+  }
+  if (user?.isDelete) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "This User Is Already Delete !"
+    );
+  }
+  if (user?.role !== USER_ROLE.admin) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "You Can't Access This Route.Only Admin Access Here !"
+    );
+  }
+
+  const andCondition = [];
+  if (filters.searchTerm) {
+    andCondition.push({
+      OR: userSearchTerm.map((field) => ({
+        [field]: {
+          contains: filters.searchTerm,
+          mode: "insensitive",
+        },
+      })),
+    });
+  }
+
+  if (Object.keys(filterData).length > 0) {
+    andCondition.push({
+      AND: Object.keys(filterData).map((key) => ({
+        [key]: {
+          equals: filterData[key as never],
+        },
+      })),
+    });
+  }
+  andCondition.push({
+    isDelete: false,
+  });
+  const whereConditions = { AND: andCondition };
+
+  const result = await prisma.user.findMany({
+    where: whereConditions,
+    skip,
+    take: limit,
+    orderBy:
+      options.sortBy && options.sortOrder
+        ? {
+            [options.sortBy]: options.sortOrder,
+          }
+        : {
+            createdAt: "desc",
+          },
+  });
+
+  const total = await prisma.user.count({
+    where: whereConditions,
+  });
+  const meta = {
+    page,
+    limit,
+    total,
+  };
+  return {
+    meta,
+    result,
+  };
 };
 
 export const userService = {

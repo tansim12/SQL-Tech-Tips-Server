@@ -1,4 +1,3 @@
-
 import { USER_ROLE, USER_STATUS } from "./User.const";
 
 export interface TUser {
@@ -12,7 +11,8 @@ export interface TUser {
   isDelete?: boolean;
   profilePhoto?: string;
   isVerified?: boolean;
-  userProfile?:string
+  userProfile?: string;
+  searchTerm?: string | undefined;
 }
 export type TUserRole = keyof typeof USER_ROLE;
 export type TUserStatus = keyof typeof USER_STATUS;
