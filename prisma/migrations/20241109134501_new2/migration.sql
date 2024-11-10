@@ -32,7 +32,6 @@ CREATE TABLE "UserProfile" (
     "description" TEXT,
     "profilePhoto" TEXT,
     "coverPhoto" TEXT,
-    "followers" TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

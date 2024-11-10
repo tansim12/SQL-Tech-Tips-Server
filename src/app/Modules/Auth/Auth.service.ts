@@ -38,6 +38,7 @@ const singUpDB = async (payload: any) => {
       data: newPayload,
     });
 
+
     const createUserProfile = await tx.userProfile.create({
       data: {
         userId: createUser?.id,
