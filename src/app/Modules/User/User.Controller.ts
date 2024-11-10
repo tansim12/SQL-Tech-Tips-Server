@@ -1,7 +1,8 @@
 import { RequestHandler } from "express";
 import { successResponse } from "../../Re-Useable/CustomResponse";
-import httpStatus from "http-status";
+
 import { userService } from "./User.service";
+import { StatusCodes } from "http-status-codes";
 const updateProfile: RequestHandler = async (req, res, next) => {
   const tokenGetsId = req?.user?.id;
   const userId = req?.params?.userId;
@@ -16,7 +17,7 @@ const updateProfile: RequestHandler = async (req, res, next) => {
     res
       .status(201)
       .send(
-        successResponse(result, httpStatus.OK, "User registered successfully")
+        successResponse(result, StatusCodes.OK, "User registered successfully")
       );
   } catch (error) {
     next(error);

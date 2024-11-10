@@ -13,6 +13,7 @@ import AppError from "../../Error-Handler/AppError";
 import { StatusCodes } from "http-status-codes";
 import { validateLoginPassword } from "../../Re-useable/BcryptValidation";
 import prisma from "../../shared/prisma";
+import { UserStatus } from "@prisma/client";
 
 const singUpDB = async (payload: any) => {
   const user = await prisma.user.findUnique({
@@ -31,13 +32,12 @@ const singUpDB = async (payload: any) => {
     payload.password,
     Number(process.env.BCRYPT_NUMBER)
   );
-  
-  const newPayload = {...payload,password:nPassword}
+
+  const newPayload = { ...payload, password: nPassword };
   const result = await prisma.$transaction(async (tx) => {
     const createUser = await tx.user.create({
       data: newPayload,
     });
-
 
     const createUserProfile = await tx.userProfile.create({
       data: {
@@ -46,7 +46,7 @@ const singUpDB = async (payload: any) => {
       },
     });
 
-     await tx.user.update({
+    await tx.user.update({
       where: {
         id: createUserProfile?.userId as string,
       },
@@ -96,52 +96,55 @@ const singUpDB = async (payload: any) => {
 };
 
 const signInDB = async (payload: TSignIn) => {
-  // const { email, password } = payload;
-  // const user = await UserModel.findOne({ email: email }).select("+password");
-  // if (!user) {
-  //   throw new AppError(404, "No Data Found");
-  // }
-  // const isDelete = user?.isDelete;
-  // if (isDelete) {
-  //   throw new AppError(StatusCodes.BAD_REQUEST, "This User Already Delete !");
-  // }
-  // const isBlock = user?.status;
-  // if (isBlock === USER_STATUS.block) {
-  //   throw new AppError(StatusCodes.BAD_REQUEST, "This User Already Blocked !");
-  // }
-  // const checkPassword = await validateLoginPassword(password, user?.password);
-  // if (!checkPassword) {
-  //   throw new AppError(
-  //     StatusCodes.BAD_REQUEST,
-  //     "Your Password dose not matched !!"
-  //   );
-  // }
-  // const jwtPayload = {
-  //   id: user?._id,
-  //   role: user?.role as string,
-  //   isVerified: user?.isVerified,
-  //   profilePhoto: user?.profilePhoto,
-  //   phone: user?.phone,
-  //   email: user?.email,
-  //   name: user?.name,
-  // };
-  // const accessToken = dynamicTokenGenerate(
-  //   jwtPayload,
-  //   process.env.SECRET_ACCESS_TOKEN as string,
-  //   process.env.SECRET_ACCESS_TOKEN_TIME as string
-  // );
-  // const refreshToken = dynamicTokenGenerate(
-  //   jwtPayload,
-  //   process.env.SECRET_REFRESH_TOKEN as string,
-  //   process.env.SECRET_REFRESH_TOKEN_TIME as string
-  // );
-  // if (!accessToken) {
-  //   throw new AppError(StatusCodes.CONFLICT, "Something Went Wrong !!");
-  // }
-  // return {
-  //   accessToken,
-  //   refreshToken,
-  // };
+  const { email, password } = payload;
+  
+  const user = await prisma.user.findUniqueOrThrow({
+    where: {
+      email,
+    },
+  });
+  
+  const isDelete = user?.isDelete;
+  if (isDelete) {
+    throw new AppError(StatusCodes.BAD_REQUEST, "This User Already Delete !");
+  }
+  const isBlock = user?.status;
+  if (isBlock === UserStatus.block) {
+    throw new AppError(StatusCodes.BAD_REQUEST, "This User Already Blocked !");
+  }
+  const checkPassword = await validateLoginPassword(password, user?.password);
+  if (!checkPassword) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "Your Password dose not matched !!"
+    );
+  }
+  const jwtPayload = {
+    id: user?.id,
+    role: user?.role as string,
+    isVerified: user?.isVerified,
+    profilePhoto: user?.profilePhoto,
+    phone: user?.phone,
+    email: user?.email,
+    name: user?.name,
+  };
+  const accessToken = dynamicTokenGenerate(
+    jwtPayload,
+    process.env.SECRET_ACCESS_TOKEN as string,
+    process.env.SECRET_ACCESS_TOKEN_TIME as string
+  );
+  const refreshToken = dynamicTokenGenerate(
+    jwtPayload,
+    process.env.SECRET_REFRESH_TOKEN as string,
+    process.env.SECRET_REFRESH_TOKEN_TIME as string
+  );
+  if (!accessToken) {
+    throw new AppError(StatusCodes.CONFLICT, "Something Went Wrong !!");
+  }
+  return {
+    accessToken,
+    refreshToken,
+  };
 };
 
 const refreshTokenDB = async (token: string) => {
