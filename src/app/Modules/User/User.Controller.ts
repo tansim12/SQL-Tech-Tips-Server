@@ -1,8 +1,9 @@
 import { RequestHandler } from "express";
-import { successResponse } from "../../Re-Useable/CustomResponse";
+
 
 import { userService } from "./User.service";
 import { StatusCodes } from "http-status-codes";
+import { successResponse } from "../../Re-useable/successResponse";
 const updateProfile: RequestHandler = async (req, res, next) => {
   const tokenGetsId = req?.user?.id;
   const userId = req?.params?.userId;
@@ -32,7 +33,7 @@ const getSingleUser: RequestHandler = async (req, res, next) => {
     res
       .status(201)
       .send(
-        successResponse(result, httpStatus.OK, "User Find Successfully Done")
+        successResponse(result, StatusCodes.OK, "User Find Successfully Done")
       );
   } catch (error) {
     next(error);
@@ -49,7 +50,7 @@ const findAllUser: RequestHandler = async (req, res, next) => {
       .send(
         successResponse(
           result,
-          httpStatus.OK,
+          StatusCodes.OK,
           "All User Find Successfully Done"
         )
       );
